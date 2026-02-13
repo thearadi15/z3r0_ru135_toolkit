@@ -1,4 +1,5 @@
-# z3r0-toolkit
+# 🔍 Bug Bounty Toolkit v1.0
+> **Copyright (c) 2026 z3r0_ru135**
 
 **Production-ready bug bounty automation toolkit** — from reconnaissance to validated findings.
 
