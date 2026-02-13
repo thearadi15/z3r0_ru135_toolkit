@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 01-recon.sh — Subdomain Enumeration, Live Host Detection & URL Collection
 # Part of z3r0-toolkit

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 04-api-enum.sh — API Endpoint Discovery & Auth Analysis
 # Discovers versioned APIs, detects auth logic, flags missing authorization

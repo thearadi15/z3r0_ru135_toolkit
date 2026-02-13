@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 03-param-miner.sh — Parameter Extraction & Risk Categorization
 # Extracts params from URLs, JS files & APIs, categorizes by risk level

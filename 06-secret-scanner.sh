@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 06-secret-scanner.sh — Secret Leak Detection
 # Scans HTTP responses & JS files for API keys, cloud secrets & credentials

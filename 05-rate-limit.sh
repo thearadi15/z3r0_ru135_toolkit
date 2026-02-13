@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 05-rate-limit.sh — Rate Limit Testing
 # Tests rate limiting by rotating headers, sessions, tokens & concurrency

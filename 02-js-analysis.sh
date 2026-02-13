@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 02-js-analysis.sh — JavaScript File Scanner
 # Extracts API endpoints, secrets, tokens & sensitive parameters from JS files

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # 08-pipeline.sh — Full Bug Bounty Automation Pipeline
 # End-to-end orchestration from recon to validation with report-ready output

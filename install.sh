@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 z3r0_ru135
 ###############################################################################
 # install.sh — z3r0-toolkit Dependency Installer
 # Installs all required tools for the bug bounty automation toolkit
