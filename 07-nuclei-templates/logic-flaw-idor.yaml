@@ -1,0 +1,211 @@
+id: logic-flaw-idor
+
+info:
+  name: IDOR Logic Flaw Detection
+  author: z3r0-toolkit
+  severity: high
+  description: Detects potential IDOR (Insecure Direct Object Reference) vulnerabilities by testing ID manipulation on common API patterns
+  tags: idor,logic,vulnerability,api
+  reference:
+    - https://owasp.org/www-project-web-security-testing-guide/
+    - https://portswigger.net/web-security/access-control/idor
+
+# ──────────────────────────────────────────────
+# IDOR Test Strategy:
+# 1. Access resource with known ID patterns
+# 2. Test sequential ID enumeration
+# 3. Test horizontal privilege escalation patterns
+# 4. Detect data leakage in responses
+# ──────────────────────────────────────────────
+
+http:
+  # ── Test 1: Sequential Integer ID Enumeration ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users/1"
+      - "{{BaseURL}}/api/users/2"
+      - "{{BaseURL}}/api/users/100"
+      - "{{BaseURL}}/api/v1/users/1"
+      - "{{BaseURL}}/api/v1/users/2"
+      - "{{BaseURL}}/api/user/1"
+      - "{{BaseURL}}/api/user/2"
+      - "{{BaseURL}}/api/account/1"
+      - "{{BaseURL}}/api/account/2"
+      - "{{BaseURL}}/api/profile/1"
+      - "{{BaseURL}}/api/profile/2"
+      - "{{BaseURL}}/api/order/1"
+      - "{{BaseURL}}/api/order/2"
+      - "{{BaseURL}}/api/invoice/1"
+      - "{{BaseURL}}/api/invoice/2"
+      - "{{BaseURL}}/api/document/1"
+      - "{{BaseURL}}/api/document/2"
+      - "{{BaseURL}}/api/file/1"
+      - "{{BaseURL}}/api/file/2"
+      - "{{BaseURL}}/api/message/1"
+      - "{{BaseURL}}/api/message/2"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      # Response contains user/sensitive data indicators
+      - type: word
+        words:
+          - "email"
+          - "username"
+          - "phone"
+          - "address"
+          - "password"
+          - "ssn"
+          - "credit"
+          - "token"
+          - "secret"
+          - "name"
+          - "first_name"
+          - "last_name"
+          - "account"
+          - "balance"
+          - "amount"
+          - "role"
+          - "permission"
+        part: body
+        condition: or
+        case-insensitive: true
+
+      # Confirm it's JSON/API response
+      - type: word
+        words:
+          - "application/json"
+          - "application/xml"
+          - "text/json"
+        part: header
+        condition: or
+        case-insensitive: true
+
+    extractors:
+      - type: regex
+        part: body
+        group: 0
+        regex:
+          - '"email"\s*:\s*"[^"]*@[^"]*"'
+          - '"phone"\s*:\s*"[^"]*"'
+          - '"username"\s*:\s*"[^"]*"'
+          - '"role"\s*:\s*"[^"]*"'
+          - '"address"\s*:\s*"[^"]*"'
+
+  # ── Test 2: Parameter-based IDOR ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users?id=1"
+      - "{{BaseURL}}/api/users?id=2"
+      - "{{BaseURL}}/api/users?user_id=1"
+      - "{{BaseURL}}/api/users?user_id=2"
+      - "{{BaseURL}}/api/profile?id=1"
+      - "{{BaseURL}}/api/profile?id=2"
+      - "{{BaseURL}}/api/account?account_id=1"
+      - "{{BaseURL}}/api/account?account_id=2"
+      - "{{BaseURL}}/api/orders?order_id=1"
+      - "{{BaseURL}}/api/orders?order_id=2"
+      - "{{BaseURL}}/api/data?ref=1"
+      - "{{BaseURL}}/api/data?ref=2"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "email"
+          - "username"
+          - "phone"
+          - "name"
+          - "account"
+          - "balance"
+        part: body
+        condition: or
+        case-insensitive: true
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - '"id"\s*:\s*\d+'
+          - '"user_id"\s*:\s*\d+'
+
+  # ── Test 3: UUID-based IDOR (common patterns) ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/api/users/00000000-0000-0000-0000-000000000001"
+      - "{{BaseURL}}/api/users/00000000-0000-0000-0000-000000000002"
+      - "{{BaseURL}}/api/v1/users/00000000-0000-0000-0000-000000000001"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "email"
+          - "username"
+          - "name"
+          - "phone"
+        part: body
+        condition: or
+        case-insensitive: true
+
+  # ── Test 4: HTTP Method IDOR (PUT/DELETE without auth) ──
+  - method: DELETE
+    path:
+      - "{{BaseURL}}/api/users/1"
+      - "{{BaseURL}}/api/v1/users/1"
+      - "{{BaseURL}}/api/account/1"
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 204
+          - 202
+
+      - type: dsl
+        dsl:
+          - "!contains(tolower(body), 'unauthorized')"
+          - "!contains(tolower(body), 'forbidden')"
+          - "!contains(tolower(body), 'not allowed')"
+        condition: and
+
+  # ── Test 5: Mass Assignment / Privilege Escalation ──
+  - method: PUT
+    path:
+      - "{{BaseURL}}/api/users/1"
+      - "{{BaseURL}}/api/v1/users/1"
+      - "{{BaseURL}}/api/profile"
+      - "{{BaseURL}}/api/account"
+
+    headers:
+      Content-Type: "application/json"
+
+    body: '{"role":"admin","is_admin":true}'
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+
+      - type: word
+        words:
+          - "admin"
+          - "role"
+          - "updated"
+          - "success"
+        part: body
+        condition: or
+        case-insensitive: true

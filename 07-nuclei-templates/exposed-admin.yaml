@@ -1,0 +1,101 @@
+id: exposed-admin-panel
+
+info:
+  name: Exposed Admin Panel Detection
+  author: z3r0-toolkit
+  severity: high
+  description: Detects publicly accessible admin panels, dashboards, and management interfaces
+  tags: admin,panel,exposure,misconfig
+  reference:
+    - https://owasp.org/www-project-web-security-testing-guide/
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/admin"
+      - "{{BaseURL}}/admin/"
+      - "{{BaseURL}}/admin/login"
+      - "{{BaseURL}}/admin/dashboard"
+      - "{{BaseURL}}/administrator"
+      - "{{BaseURL}}/administrator/login"
+      - "{{BaseURL}}/wp-admin"
+      - "{{BaseURL}}/wp-login.php"
+      - "{{BaseURL}}/manager"
+      - "{{BaseURL}}/management"
+      - "{{BaseURL}}/console"
+      - "{{BaseURL}}/dashboard"
+      - "{{BaseURL}}/portal"
+      - "{{BaseURL}}/cpanel"
+      - "{{BaseURL}}/phpmyadmin"
+      - "{{BaseURL}}/adminer"
+      - "{{BaseURL}}/adminer.php"
+      - "{{BaseURL}}/_admin"
+      - "{{BaseURL}}/controlpanel"
+      - "{{BaseURL}}/webadmin"
+      - "{{BaseURL}}/siteadmin"
+      - "{{BaseURL}}/admin.php"
+      - "{{BaseURL}}/backstage"
+      - "{{BaseURL}}/kibana"
+      - "{{BaseURL}}/grafana"
+      - "{{BaseURL}}/jenkins"
+      - "{{BaseURL}}/sonarqube"
+      - "{{BaseURL}}/traefik"
+      - "{{BaseURL}}/actuator"
+      - "{{BaseURL}}/actuator/env"
+      - "{{BaseURL}}/elmah.axd"
+      - "{{BaseURL}}/_debug"
+      - "{{BaseURL}}/debug"
+      - "{{BaseURL}}/server-status"
+      - "{{BaseURL}}/server-info"
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/phpinfo.php"
+      - "{{BaseURL}}/info.php"
+
+    host-redirects: true
+    max-redirects: 2
+    stop-at-first-match: false
+
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 301
+          - 302
+
+      - type: word
+        words:
+          - "admin"
+          - "login"
+          - "dashboard"
+          - "panel"
+          - "manager"
+          - "console"
+          - "sign in"
+          - "log in"
+          - "username"
+          - "password"
+          - "phpmyadmin"
+          - "kibana"
+          - "grafana"
+          - "jenkins"
+          - "phpinfo()"
+          - "environment"
+          - "actuator"
+          - "server-status"
+        part: body
+        condition: or
+        case-insensitive: true
+
+    extractors:
+      - type: regex
+        part: body
+        group: 0
+        regex:
+          - '<title>[^<]*</title>'
+          - '<h[1-3][^>]*>[^<]*(?:admin|login|dashboard|panel|console)[^<]*</h[1-3]>'
+
+      - type: kval
+        kval:
+          - content_type
+          - server

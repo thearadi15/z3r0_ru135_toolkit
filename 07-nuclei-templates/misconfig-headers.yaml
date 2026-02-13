@@ -1,0 +1,90 @@
+id: misconfig-security-headers
+
+info:
+  name: Missing Security Headers
+  author: z3r0-toolkit
+  severity: medium
+  description: Detects missing or misconfigured HTTP security headers
+  tags: misconfig,headers,security
+  reference:
+    - https://owasp.org/www-project-secure-headers/
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/login"
+      - "{{BaseURL}}/api"
+
+    host-redirects: true
+    max-redirects: 3
+
+    matchers-condition: or
+    matchers:
+      - type: dsl
+        name: missing-csp
+        dsl:
+          - "!regex('(?i)content-security-policy', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: missing-hsts
+        dsl:
+          - "!regex('(?i)strict-transport-security', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: missing-x-frame-options
+        dsl:
+          - "!regex('(?i)x-frame-options', header)"
+          - "!regex('(?i)frame-ancestors', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: missing-x-content-type-options
+        dsl:
+          - "!regex('(?i)x-content-type-options', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: missing-referrer-policy
+        dsl:
+          - "!regex('(?i)referrer-policy', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: missing-permissions-policy
+        dsl:
+          - "!regex('(?i)permissions-policy', header)"
+          - "!regex('(?i)feature-policy', header)"
+          - "status_code == 200"
+        condition: and
+
+      - type: dsl
+        name: server-info-disclosure
+        dsl:
+          - "regex('(?i)server:\\s*(apache|nginx|iis|tomcat|jetty|express|gunicorn)', header)"
+        condition: and
+
+      - type: dsl
+        name: x-powered-by-disclosure
+        dsl:
+          - "regex('(?i)x-powered-by', header)"
+        condition: and
+
+    extractors:
+      - type: kval
+        kval:
+          - server
+          - x_powered_by
+          - content_security_policy
+          - strict_transport_security
+          - x_frame_options
+          - x_content_type_options
+          - referrer_policy
+          - permissions_policy

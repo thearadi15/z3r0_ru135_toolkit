@@ -1,0 +1,107 @@
+id: open-redirect-detection
+
+info:
+  name: Open Redirect via Parameter Injection
+  author: z3r0-toolkit
+  severity: medium
+  description: Detects open redirect vulnerabilities through common redirect parameters
+  tags: redirect,vulnerability,misconfig
+  reference:
+    - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+
+variables:
+  redirect_target: "https://evil.com"
+  redirect_target_encoded: "https%3A%2F%2Fevil.com"
+
+http:
+  # ── Test 1: Common redirect parameters ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/?redirect={{redirect_target}}"
+      - "{{BaseURL}}/?redirect_url={{redirect_target}}"
+      - "{{BaseURL}}/?redirect_uri={{redirect_target}}"
+      - "{{BaseURL}}/?url={{redirect_target}}"
+      - "{{BaseURL}}/?next={{redirect_target}}"
+      - "{{BaseURL}}/?goto={{redirect_target}}"
+      - "{{BaseURL}}/?dest={{redirect_target}}"
+      - "{{BaseURL}}/?destination={{redirect_target}}"
+      - "{{BaseURL}}/?return={{redirect_target}}"
+      - "{{BaseURL}}/?return_url={{redirect_target}}"
+      - "{{BaseURL}}/?returnTo={{redirect_target}}"
+      - "{{BaseURL}}/?return_to={{redirect_target}}"
+      - "{{BaseURL}}/?continue={{redirect_target}}"
+      - "{{BaseURL}}/?target={{redirect_target}}"
+      - "{{BaseURL}}/?rurl={{redirect_target}}"
+      - "{{BaseURL}}/?callback={{redirect_target}}"
+      - "{{BaseURL}}/?out={{redirect_target}}"
+      - "{{BaseURL}}/?view={{redirect_target}}"
+      - "{{BaseURL}}/?link={{redirect_target}}"
+      - "{{BaseURL}}/?to={{redirect_target}}"
+
+    host-redirects: false
+    max-redirects: 0
+
+    matchers-condition: or
+    matchers:
+      # Match redirect in Location header
+      - type: regex
+        part: header
+        name: location-redirect
+        regex:
+          - '(?i)location:\s*https?://evil\.com'
+
+      # Match redirect in response body (meta refresh)
+      - type: regex
+        part: body
+        name: meta-refresh-redirect
+        regex:
+          - '(?i)content=["\x27]\d+;\s*url=https?://evil\.com'
+          - '(?i)window\.location\s*=\s*["\x27]https?://evil\.com'
+          - '(?i)document\.location\s*=\s*["\x27]https?://evil\.com'
+
+      # 3xx status with evil.com in location
+      - type: dsl
+        name: redirect-status
+        dsl:
+          - "status_code >= 300 && status_code < 400"
+          - "contains(tolower(header), 'evil.com')"
+        condition: and
+
+    extractors:
+      - type: kval
+        kval:
+          - location
+
+  # ── Test 2: Protocol-relative bypass ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/?redirect=//evil.com"
+      - "{{BaseURL}}/?url=//evil.com"
+      - "{{BaseURL}}/?next=//evil.com"
+      - "{{BaseURL}}/?redirect=///evil.com"
+      - "{{BaseURL}}/?redirect=////evil.com"
+      - "{{BaseURL}}/?redirect=/\\evil.com"
+
+    host-redirects: false
+
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - '(?i)location:\s*//+evil\.com'
+          - '(?i)location:\s*https?://evil\.com'
+
+  # ── Test 3: Encoded bypass ──
+  - method: GET
+    path:
+      - "{{BaseURL}}/?redirect={{redirect_target_encoded}}"
+      - "{{BaseURL}}/?url={{redirect_target_encoded}}"
+      - "{{BaseURL}}/?redirect=%68%74%74%70%73%3a%2f%2f%65%76%69%6c%2e%63%6f%6d"
+
+    host-redirects: false
+
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - '(?i)location:\s*https?://evil\.com'

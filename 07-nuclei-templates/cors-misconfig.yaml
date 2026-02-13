@@ -1,0 +1,135 @@
+id: cors-misconfiguration
+
+info:
+  name: CORS Misconfiguration Detection
+  author: z3r0-toolkit
+  severity: high
+  description: Detects various CORS misconfigurations including wildcard origins, null origin, and reflected origins
+  tags: cors,misconfig,security
+  reference:
+    - https://portswigger.net/web-security/cors
+    - https://owasp.org/www-project-web-security-testing-guide/
+
+http:
+  # ── Test 1: Reflected Origin ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api"
+      - "{{BaseURL}}/api/v1"
+
+    headers:
+      Origin: "https://evil.com"
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        name: reflected-origin
+        dsl:
+          - "contains(tolower(header), 'access-control-allow-origin: https://evil.com')"
+        condition: and
+
+      - type: dsl
+        name: with-credentials
+        dsl:
+          - "contains(tolower(header), 'access-control-allow-credentials: true')"
+        condition: and
+
+    extractors:
+      - type: kval
+        kval:
+          - access_control_allow_origin
+          - access_control_allow_credentials
+          - access_control_allow_methods
+
+  # ── Test 2: Wildcard Origin with Credentials ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api"
+
+    headers:
+      Origin: "https://attacker.com"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "access-control-allow-origin: *"
+        case-insensitive: true
+
+      - type: word
+        part: header
+        words:
+          - "access-control-allow-credentials: true"
+        case-insensitive: true
+
+  # ── Test 3: Null Origin ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+      - "{{BaseURL}}/api"
+
+    headers:
+      Origin: "null"
+
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "access-control-allow-origin: null"
+        case-insensitive: true
+
+    extractors:
+      - type: kval
+        kval:
+          - access_control_allow_origin
+          - access_control_allow_credentials
+
+  # ── Test 4: Subdomain Prefix Bypass ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    headers:
+      Origin: "https://{{Host}}.evil.com"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(tolower(header), concat('access-control-allow-origin: https://', tolower(host), '.evil.com'))"
+
+  # ── Test 5: Pre-domain Bypass ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    headers:
+      Origin: "https://evil{{Host}}"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(tolower(header), concat('access-control-allow-origin: https://evil', tolower(host)))"
+
+  # ── Test 6: Insecure Protocol Downgrade ──
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    headers:
+      Origin: "http://{{Host}}"
+
+    matchers-condition: and
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(tolower(header), concat('access-control-allow-origin: http://', tolower(host)))"
+
+      - type: word
+        part: header
+        words:
+          - "access-control-allow-credentials: true"
+        case-insensitive: true
